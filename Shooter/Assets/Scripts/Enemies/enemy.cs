@@ -15,12 +15,12 @@ public class enemy : MonoBehaviour
     public float speed = 1f;
     public GameObject explosion;
     private bool canMove = true;
-    private bool canShoot = true;
+    private bool canShoot ;
 
     //  private float jumpTimer = 0f;
     private ParticleSystem.EmissionModule right_Muzzle_Emission, left_Muzzle_Emission, right_Fire_Emission, left_Fire_Emission;
  
-    private Rigidbody rigidbody;
+   // private Rigidbody rigidbody;
   //  private ConstantForce constantForce;
     public Light leftLight, rightLight;
     private void Awake()
@@ -44,17 +44,34 @@ public class enemy : MonoBehaviour
         right_Fire_Emission.rateOverTime = 0f;
     }
 
-    // Update is called once per frame
+    bool isGrounded()
+    {
+        return Physics.Raycast(transform.position + transform.forward * 0.4f + transform.up * 0.1f, Vector3.down, 0.1f);
+       
+        //going to create a line from position in direction and the length
+    }
+    bool checkFront()
+    {
+        //if he does not have space to move he will turn back
+        return Physics.Raycast(transform.position + transform.forward * 0.4f + transform.up * 0.5f, transform.forward, 0.1f);
+    }
+    void completedMove()
+    {
+        anim.Play("Walk");
+        canMove = true;
+
+    }
     void Update()
     {
         move();
+        checkToShoot();
     }
     void move()
     {
         if (canMove)
         {
             transform.Translate(Vector3.forward * speed * Time.deltaTime);
-            if (!isGrounded() && checkFront())
+            if (isGrounded() || checkFront())
             {
                 //not grounded or 
                 anim.Play("Idle");
@@ -71,21 +88,54 @@ public class enemy : MonoBehaviour
         //    LeanTween.rotateAroundLocal(gameObject, Vector3.up, 180f, 0.5f).setOnComplete(completedMove);
         //}
     }
-    bool isGrounded()
+    void checkToShoot()
     {
-        bool y= Physics.Raycast(transform.position + transform.forward * 0.4f + transform.up * 0.1f, Vector3.down, 0.1f);
-        return y;
-        //going to create a line from position in direction and the length
-    }
-    bool checkFront()
-    {
-        //if he does not have space to move he will turn back
-        return Physics.Raycast(transform.position + transform.forward * 0.4f + transform.up * 0.5f,transform.forward, 0.1f);
-    }
-    void completedMove()
-    {
-        anim.Play("Walk");
-        canMove = true;
+        if (canShoot)
+        {
+            if (!audioManager.isPlaying)
+            {
+                //if the audio manger is not playing will return false
+                audioManager.Play();
+               
 
+            }
+            right_Muzzle_Emission.rateOverTime = left_Muzzle_Emission.rateOverTime = 10f;
+            right_Fire_Emission.rateOverTime = left_Fire_Emission.rateOverTime = 30f;
+
+
+        }else 
+        {
+            audioManager.Stop();
+            right_Muzzle_Emission.rateOverTime = left_Muzzle_Emission.rateOverTime = 0f;
+            right_Fire_Emission.rateOverTime = left_Fire_Emission.rateOverTime = 0f;
+        }
+    }
+    private void OnTriggerEnter(Collider t)
+    {
+        if (t.gameObject.name == "Robot")
+        {
+            canShoot = true;
+
+        }
+    }
+    private void OnTriggerExit(Collider t)
+    {
+        if (t.gameObject.name == "Robot")
+        {
+            canShoot = false;
+
+        }
+    }
+    void Damage()
+    {
+        Instantiate(explosion, transform.position, Quaternion.identity);
+        Destroy(gameObject,1f);
+    }
+    private void OnParticleCollision(GameObject t)
+    {
+        if (t.name == "Muzzle")
+        {
+            Damage();
+        }
     }
 }
